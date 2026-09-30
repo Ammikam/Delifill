@@ -3,9 +3,9 @@ services:
     image: postgres:16
     restart: unless-stopped
     environment:
-      POSTGRES_USER: gaswater
-      POSTGRES_PASSWORD: gaswater
-      POSTGRES_DB: gaswater
+      POSTGRES_USER: delifill
+      POSTGRES_PASSWORD: delifill
+      POSTGRES_DB: delifill
     ports:
       - '5432:5432'
     volumes:
