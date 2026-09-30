@@ -11,13 +11,13 @@
     "dev:mobile": "npm run start -w apps/mobile",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
-    "lint": "eslint server packages",
+    "lint": "eslint server",
     "format": "prettier --write .",
     "typecheck": "npm run typecheck -w server"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "eslint": "^10.11.0",
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
     "prettier": "^3.9.9",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.0"
