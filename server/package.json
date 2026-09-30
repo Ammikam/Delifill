@@ -22,5 +22,13 @@
     "@types/node": "^26.6.3",
     "prisma": "^6.19.3",
     "tsx": "^4.23.15"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^5.2.1",
+    "helmet": "^8.3.0",
+    "zod": "^4.6.5"
   }
 }
