@@ -11,7 +11,7 @@
     "dev:mobile": "npm run start -w apps/mobile",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
-    "lint": "eslint server",
+    "lint": "npm run lint -w server",
     "format": "prettier --write .",
     "typecheck": "npm run typecheck -w server"
   },
