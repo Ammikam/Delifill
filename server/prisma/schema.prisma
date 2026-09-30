@@ -6,3 +6,375 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// ---------- Enums ----------
+
+enum Role {
+  CUSTOMER
+  SUPPLIER
+  DRIVER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum SupplierStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum DriverStatus {
+  AVAILABLE
+  BUSY
+  OFFLINE
+}
+
+enum ProductType {
+  GAS
+  WATER
+  ACCESSORY
+}
+
+enum ServiceType {
+  REFILL
+  EXCHANGE
+  NEW
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  PREPARING
+  READY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  REJECTED
+  CANCELLED
+  FAILED_DELIVERY
+}
+
+enum PaymentMethod {
+  MPESA
+  CASH_ON_DELIVERY
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+  REFUNDED
+}
+
+enum DeliveryStatus {
+  ASSIGNED
+  ACCEPTED
+  PICKED_UP
+  OUT_FOR_DELIVERY
+  ARRIVED
+  DELIVERED
+  FAILED
+}
+
+// ---------- Users ----------
+
+model User {
+  id           String     @id @default(uuid())
+  phone        String     @unique
+  email        String?    @unique
+  passwordHash String
+  fullName     String
+  role         Role
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  customer      Customer?
+  supplier      Supplier?
+  driver        Driver?
+  notifications Notification[]
+
+  @@index([role, status])
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  addresses Address[]
+  orders    Order[]
+  reviews   Review[]
+}
+
+model Supplier {
+  id            String         @id @default(uuid())
+  userId        String         @unique
+  businessName  String
+  description   String?
+  businessPhone String
+  address       String
+  latitude      Float?
+  longitude     Float?
+  status        SupplierStatus @default(PENDING)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  drivers   Driver[]
+  products  Product[]
+  inventory Inventory[]
+  orders    Order[]
+  reviews   Review[]
+
+  @@index([status])
+}
+
+model Driver {
+  id           String       @id @default(uuid())
+  userId       String       @unique
+  supplierId   String
+  vehicleType  String?
+  vehiclePlate String?
+  status       DriverStatus @default(OFFLINE)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supplier   Supplier   @relation(fields: [supplierId], references: [id])
+  deliveries Delivery[]
+  reviews    Review[]
+
+  @@index([supplierId, status])
+}
+
+model Address {
+  id           String   @id @default(uuid())
+  customerId   String
+  label        String
+  addressLine  String
+  estate       String?
+  landmark     String?
+  instructions String?
+  latitude     Float?
+  longitude    Float?
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orders   Order[]
+
+  @@index([customerId])
+}
+
+// ---------- Catalogue ----------
+
+model ProductCategory {
+  id        String      @id @default(uuid())
+  name      String      @unique
+  slug      String      @unique
+  type      ProductType
+  createdAt DateTime    @default(now())
+
+  products Product[]
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  supplierId  String
+  categoryId  String
+  type        ProductType
+  name        String
+  description String?
+  price       Int // KES, whole shillings
+  imageUrl    String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  supplier     Supplier        @relation(fields: [supplierId], references: [id])
+  category     ProductCategory @relation(fields: [categoryId], references: [id])
+  gasProduct   GasProduct?
+  waterProduct WaterProduct?
+  inventory    Inventory?
+  orderItems   OrderItem[]
+
+  @@index([supplierId, isActive])
+  @@index([categoryId, isActive])
+  @@index([type, isActive])
+}
+
+model GasProduct {
+  id          String      @id @default(uuid())
+  productId   String      @unique
+  brand       String
+  sizeKg      Int
+  serviceType ServiceType
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([brand, sizeKg, serviceType])
+}
+
+model WaterProduct {
+  id          String      @id @default(uuid())
+  productId   String      @unique
+  sizeLitres  Int
+  serviceType ServiceType
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([sizeLitres, serviceType])
+}
+
+model Inventory {
+  id                String   @id @default(uuid())
+  productId         String   @unique
+  supplierId        String
+  quantity          Int      @default(0)
+  lowStockThreshold Int      @default(5)
+  updatedAt         DateTime @updatedAt
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  supplier Supplier @relation(fields: [supplierId], references: [id])
+
+  @@index([supplierId])
+}
+
+// ---------- Orders ----------
+
+model Order {
+  id            String        @id @default(uuid())
+  orderNumber   String        @unique
+  customerId    String
+  supplierId    String
+  addressId     String?
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod
+  subtotal      Int
+  deliveryFee   Int
+  total         Int
+  notes         String?
+
+  // Delivery address snapshot (survives address edits or deletion)
+  deliveryAddressLine String
+  deliveryLatitude    Float?
+  deliveryLongitude   Float?
+  deliveryPhone       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer Customer    @relation(fields: [customerId], references: [id])
+  supplier Supplier    @relation(fields: [supplierId], references: [id])
+  address  Address?    @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  items    OrderItem[]
+  payments Payment[]
+  delivery Delivery?
+  review   Review?
+
+  @@index([customerId, createdAt])
+  @@index([supplierId, status, createdAt])
+  @@index([status])
+}
+
+model OrderItem {
+  id          String @id @default(uuid())
+  orderId     String
+  productId   String
+  productName String
+  unitPrice   Int
+  quantity    Int
+  lineTotal   Int
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  orderId        String
+  method         PaymentMethod
+  amount         Int
+  status         PaymentStatus @default(PENDING)
+  phone          String?
+  providerRef    String?       @unique // e.g. M-Pesa CheckoutRequestID
+  transactionRef String?       @unique // e.g. M-Pesa receipt number
+  failureReason  String?
+  rawCallback    Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@index([status, createdAt])
+}
+
+model Delivery {
+  id            String         @id @default(uuid())
+  orderId       String         @unique
+  driverId      String
+  status        DeliveryStatus @default(ASSIGNED)
+  otpHash       String?
+  otpExpiresAt  DateTime?
+  otpAttempts   Int            @default(0)
+  failureReason String?
+  assignedAt    DateTime       @default(now())
+  pickedUpAt    DateTime?
+  deliveredAt   DateTime?
+  updatedAt     DateTime       @updatedAt
+
+  order  Order  @relation(fields: [orderId], references: [id])
+  driver Driver @relation(fields: [driverId], references: [id])
+
+  @@index([driverId, status])
+}
+
+// ---------- Engagement ----------
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+model Review {
+  id             String   @id @default(uuid())
+  orderId        String   @unique // one review per order
+  customerId     String
+  supplierId     String
+  driverId       String?
+  supplierRating Int
+  driverRating   Int?
+  comment        String?
+  createdAt      DateTime @default(now())
+
+  order    Order    @relation(fields: [orderId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+  supplier Supplier @relation(fields: [supplierId], references: [id])
+  driver   Driver?  @relation(fields: [driverId], references: [id])
+
+  @@index([supplierId])
+  @@index([driverId])
+}
