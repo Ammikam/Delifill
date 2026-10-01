@@ -4,17 +4,20 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
 ## Get started
 
-1. Install dependencies
+From the repository root, install dependencies and start the mobile app:
 
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+npm run dev:mobile
+```
 
-2. Start the app
+Do not run `npx expo start` from the repository root; this is a monorepo and the Expo app lives in `apps/mobile`.
 
-   ```bash
-   npx expo start
-   ```
+Or, from this directory, start Expo directly:
+
+```bash
+npm start
+```
 
 In the output, you'll find options to open the app in a
 
@@ -23,7 +26,7 @@ In the output, you'll find options to open the app in a
 - [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
 - [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+You can start developing by editing the files inside **src/app**. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
 ## Get a fresh project
 
